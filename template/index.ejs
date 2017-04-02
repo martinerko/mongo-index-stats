@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<head>
+	<title>Mongo index stats report</title>
+	<meta name="author" content="martinerko" data-github="http://github.com/martinerko">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vega/2.6.5/vega.min.js" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vega-lite/1.3.1/vega-lite.min.js" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vega-embed/2.2.0/vega-embed.min.js" charset="utf-8"></script>
+	<script src="https://vega.github.io/datalib/datalib.min.js"></script>
+	<!-- Vega Tooltip -->
+	<script src="https://vega.github.io/vega-tooltip/vg-tooltip.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://vega.github.io/vega-tooltip/vg-tooltip.css">
+</head>
+<style>
+.collection-filters,
+.collection-index-usage{
+	margin-bottom:100px;
+}
+.collection-filters label{
+	width:150px;
+}
+.collection-name{
+	font-weight: bold;
+	padding-right: 245px;
+}
+.wrapper{
+	text-align: right;
+}
+</style>
+<body>
+<div class="wrapper">
+	<div class="collection-filters">
+		<label for="list-of-collections">Collection:</label>
+		<select name="list-of-collections" onchange="javascript:location.hash = this.value;">
+		<% collectionNames.forEach(function(collectionName){ -%>
+		<option value="<%= collectionName.replace(/\./g, '-') %>"><%= collectionName %></option>
+		<% }); %>
+		</select>
+	</div>
+
+	<div id="vis-tooltip" class="vg-tooltip"></div>
+
+	<% collectionNames.forEach(function(collectionName){ %>
+	<a class="collection-name" name="<%= collectionName.replace(/\./g, '-') %>"><%= collectionName %></a>
+	<div class="collection-index-usage" id="<%= collectionName.replace(/\./g, '-') %>"></div>
+	<% }); %>
+</div>
+
+	<script>
+		// Assign the specification to a local variable vlSpec.
+		var vlSpec = {
+			"data": {
+				"values": []
+			},
+			"width": 500,
+			"mark": "point",
+			"encoding": {
+				"y": {
+					"field": "name",
+					"type": "nominal",
+					"axis": {
+						"title": "Index name",
+						"labelAngle":0,
+						"labelMaxLength": 128 //max length of index in mongo
+					}
+				},
+				"x": {
+					"field": "ops",
+					"type": "quantitative",
+					"axis": {
+						"title": "Total access ops. since measured date"
+					}
+				},
+				"color": {
+					"field": "date",
+					"type": "nominal",
+					"legend": {
+						"title": "Date"
+					}
+				}
+			}
+		};
+
+		var data = <%- JSON.stringify(data) %>;
+
+		<% collectionNames.forEach(function(collectionName){ %>
+		vg.embed("#<%= collectionName.replace(/\./g, '-') %>", {
+			mode: "vega-lite",
+			actions: false,
+			spec: Object.assign({}, vlSpec, {
+				"data": {
+					"values": data["<%= collectionName %>"]
+				}
+			})
+		}, cb);
+		<% }); %>
+
+		function cb(err, result){
+			if(err){
+				console.error(err);
+				return;
+			}
+			vl.tooltip(result.view, vlSpec);
+		}
+	</script>
+</body>
